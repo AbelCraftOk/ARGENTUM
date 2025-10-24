@@ -14,90 +14,88 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// ====== ELEMENTOS ======
+const tabLogin = document.getElementById("tab-login");
+const tabRegister = document.getElementById("tab-register");
+const contLogin = document.getElementById("login");
+const contRegister = document.getElementById("register");
+const msg = document.getElementById("msg");
+
 // ====== CAMBIO DE PESTAÑAS ======
-window.cambiarPestaña = function(pestaña) {
-  document.querySelectorAll(".container").forEach(c => c.classList.add("hidden"));
-  document.getElementById(pestaña).classList.remove("hidden");
+tabLogin.onclick = () => {
+  tabLogin.classList.add("active");
+  tabRegister.classList.remove("active");
+  contLogin.classList.add("active");
+  contRegister.classList.remove("active");
+  msg.innerText = "";
 };
 
-// ====== LOGIN ======
-window.login = async function() {
-  const usuario = document.getElementById("usuarioLogin").value.trim();
-  const clave = document.getElementById("claveLogin").value.trim();
-
-  if (!usuario || !clave) return alert("Completa todos los campos");
-
-  const dbRef = ref(db);
-  const snapshot = await get(child(dbRef, "cuentas/" + usuario));
-
-  if (!snapshot.exists()) return alert("Usuario no encontrado");
-
-  const datos = snapshot.val();
-  if (datos.clave !== clave) return alert("Clave incorrecta");
-
-  document.getElementById("nombreUsuario").innerText = usuario;
-  cambiarPestaña("inicio");
+tabRegister.onclick = () => {
+  tabRegister.classList.add("active");
+  tabLogin.classList.remove("active");
+  contRegister.classList.add("active");
+  contLogin.classList.remove("active");
+  msg.innerText = "";
 };
 
-// ====== REGISTER ======
-window.register = async function() {
+// ====== FUNCIONES ======
+function mostrarMensaje(texto, color = "black") {
+  msg.style.color = color;
+  msg.innerText = texto;
+}
+
+// ====== REGISTRO ======
+document.getElementById("btnRegister").onclick = async () => {
   const usuario = document.getElementById("usuarioRegister").value.trim();
   const clave = document.getElementById("claveRegister").value.trim();
 
-  if (!usuario || !clave) return alert("Completa todos los campos");
+  if (!usuario || !clave) {
+    mostrarMensaje("Completa todos los campos", "red");
+    return;
+  }
+
+  mostrarMensaje("Registrando cuenta...", "blue");
+
+  const dbRef = ref(db);
+  const existe = await get(child(dbRef, "cuentas/" + usuario));
+  if (existe.exists()) {
+    mostrarMensaje("El usuario ya existe", "red");
+    return;
+  }
 
   await set(ref(db, "cuentas/" + usuario), { usuario, clave });
-  alert("Cuenta creada correctamente");
-  location.reload();
+
+  mostrarMensaje("Cuenta creada correctamente. Redirigiendo al login...", "green");
+  setTimeout(() => tabLogin.click(), 2000);
 };
 
-// ====== CREAR SALA TA-TE-TI ======
-window.crearSala1 = async function() {
-  const cantidad = document.getElementById("cantTateti").value;
-  if (!cantidad) return alert("Selecciona una cantidad");
+// ====== LOGIN ======
+document.getElementById("btnLogin").onclick = async () => {
+  const usuario = document.getElementById("usuarioLogin").value.trim();
+  const clave = document.getElementById("claveLogin").value.trim();
 
-  const codigo = generarCodigo();
-  const data = {
-    usersMAX: cantidad,
-    modo: "tateti"
-  };
+  if (!usuario || !clave) {
+    mostrarMensaje("Completa todos los campos", "red");
+    return;
+  }
 
-  await set(ref(db, "partidas/" + codigo), data);
-  window.open(`https://abelcraftok.github.io/ARGENTUM/partidas.html?codigo=${codigo}`, "_blank");
+  mostrarMensaje("Iniciando sesión...", "blue");
+
+  const dbRef = ref(db);
+  const snapshot = await get(child(dbRef, "cuentas/" + usuario));
+  if (!snapshot.exists()) {
+    mostrarMensaje("Usuario no encontrado", "red");
+    return;
+  }
+
+  const datos = snapshot.val();
+  if (datos.clave !== clave) {
+    mostrarMensaje("Clave incorrecta", "red");
+    return;
+  }
+
+  mostrarMensaje("Inicio de sesión exitoso", "green");
+  setTimeout(() => {
+    window.location.href = "partida.html?user=" + encodeURIComponent(usuario);
+  }, 1500);
 };
-
-// ====== CREAR SALA TUTTI FRUTTI ======
-window.crearSala2 = async function() {
-  const cantidad = document.getElementById("cantTutti").value;
-  if (!cantidad) return alert("Selecciona una cantidad");
-
-  const seleccionadas = Array.from(document.querySelectorAll("#categorias input[type=checkbox]:checked"))
-    .map(c => c.value || "Cat. Obligatoria");
-
-  const codigo = generarCodigo();
-  const data = {
-    usersMAX: cantidad,
-    categorias: seleccionadas.join(", "),
-    modo: "Tutti Frutti"
-  };
-
-  await set(ref(db, "partidas/" + codigo), data);
-  window.open(`https://abelcraftok.github.io/ARGENTUM/partidas.html?codigo=${codigo}`, "_blank");
-};
-
-// ====== ENTRAR A SALA ======
-window.entrar = function() {
-  const codigo = document.getElementById("codigo-partida").value.trim();
-  if (!codigo) return alert("Ingresá un código");
-  window.open(`https://abelcraftok.github.io/ARGENTUM/partidas.html?codigo=${codigo}`, "_blank");
-};
-
-// ====== UTILIDAD ======
-function generarCodigo() {
-  const letras = "abcdefghijklmnopqrstuvwxyz";
-  let c1 = "";
-  for (let i = 0; i < 3; i++) c1 += letras[Math.floor(Math.random() * letras.length)];
-  let c2 = "";
-  for (let i = 0; i < 3; i++) c2 += letras[Math.floor(Math.random() * letras.length)];
-  return `${c1}-${c2}`;
-}

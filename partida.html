@@ -3,54 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Argentum Games - Partida</title>
-  <link rel="icon" type="image/png" href="./logo.png">
-  <script type="module" src="script2.js"></script>
+  <title>Argentum - Partidas</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
-    .hidden { display: none; }
-    .container { width: 90%; max-width: 600px; margin: 40px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    input, button { width: 100%; margin: 5px 0; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-    button { background: #007bff; color: white; cursor: pointer; border: none; }
-    button:hover { background: #0056b3; }
-    h2, h3, p { margin: 10px 0; }
-    .nav-bar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 20px; }
-    .nav-btn { border: 1px solid #007bff; background: white; color: #007bff; padding: 8px; border-radius: 5px; cursor: pointer; }
-    .nav-btn:hover { background: #007bff; color: white; }
-    .recuadro { background: #e7e7e7; padding: 10px; border-radius: 5px; margin-top: 15px; }
+    body { font-family: Arial; background: #fafafa; text-align: center; margin: 0; padding: 20px; }
+    h2 { color: #333; }
+    input, select { padding: 6px; margin: 5px; border: 1px solid #aaa; border-radius: 5px; }
+    button { background: #4caf50; border: none; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #43a047; }
+    #msg { margin-top: 10px; font-weight: bold; }
+    .box { border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin: 10px auto; width: 320px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
   </style>
 </head>
 <body>
-  <!-- LOGIN -->
-  <div id="login" class="container">
-    <p>Introducí tu nombre de usuario</p>
-    <input type="text" id="usuarioLogin" placeholder="Usuario">
-    <p>Introducí tu clave</p>
-    <input type="password" id="claveLogin" placeholder="Clave">
-    <button onclick="login()">Iniciar Sesión</button>
-    <button onclick="cambiarPestaña('register')">Crear una Cuenta</button>
+  <h2>🎮 Argentum Games - Partidas</h2>
+  <p>Usuario: <span id="nombreUsuario"></span></p>
+
+  <div class="box">
+    <h3>Crear partida</h3>
+    <select id="modo">
+      <option value="">Seleccionar modo</option>
+      <option value="tateti">Ta-Te-Ti</option>
+      <option value="tutti-frutti">Tutti Frutti</option>
+    </select><br>
+    <input type="number" id="jugadoresMax" placeholder="Cantidad de jugadores" min="2" max="10"><br>
+    <button id="crearBtn">Crear sala</button>
   </div>
 
-  <!-- REGISTER -->
-  <div id="register" class="container hidden">
-    <p>Introducí tu nombre de usuario</p>
-    <input type="text" id="usuarioRegister" placeholder="Usuario">
-    <p>Introducí tu clave</p>
-    <input type="password" id="claveRegister" placeholder="Clave">
-    <button onclick="register()">Registrarme</button>
-    <button onclick="cambiarPestaña('login')">Ya tengo una cuenta</button>
+  <div class="box">
+    <h3>Unirse a partida</h3>
+    <input type="text" id="codigoJoin" placeholder="Código de sala"><br>
+    <button id="unirBtn">Entrar</button>
   </div>
 
-  <!-- PARTIDA -->
-  <div id="partida" class="container hidden">
-    <div class="nav-bar">
-      <button class="nav-btn" onclick="copiarURL()">📋 Copiar URL</button>
-    </div>
-    <div class="recuadro">
-      <h2>Usuarios en la Sala</h2>
-      <div id="users-dentro">Cargando...</div>
-    </div>
-    <button onclick="comenzarPartida()">Comenzar Partida</button>
-  </div>
+  <div id="msg"></div>
+
+  <script type="module" src="script2.js"></script>
 </body>
 </html>

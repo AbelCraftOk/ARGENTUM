@@ -1,6 +1,6 @@
 // ====== CONFIGURACIÓN FIREBASE ======
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getDatabase, ref, set, get, onValue, child } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCYXAhphpsLpjhAY-am0TxXmh7JwnTztHE",
@@ -14,108 +14,85 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// ====== CAMBIO DE PESTAÑAS ======
-window.cambiarPestaña = function(pestaña) {
-  document.querySelectorAll(".container").forEach(c => c.classList.add("hidden"));
-  document.getElementById(pestaña).classList.remove("hidden");
-};
+// ====== ELEMENTOS ======
+const msg = document.getElementById("msg");
+const userSpan = document.getElementById("nombreUsuario");
+const crearBtn = document.getElementById("crearBtn");
+const unirBtn = document.getElementById("unirBtn");
 
-// ====== LOGIN ======
-window.login = async function() {
-  const usuario = document.getElementById("usuarioLogin").value.trim();
-  const clave = document.getElementById("claveLogin").value.trim();
-
-  if (!usuario || !clave) return alert("Completa todos los campos");
-
-  const dbRef = ref(db);
-  const snapshot = await get(child(dbRef, "cuentas/" + usuario));
-
-  if (!snapshot.exists()) return alert("Usuario no encontrado");
-
-  const datos = snapshot.val();
-  if (datos.clave !== clave) return alert("Clave incorrecta");
-
-  localStorage.setItem("usuarioActual", usuario);
-  cambiarPestaña("partida");
-  cargarPartida();
-};
-
-// ====== REGISTER ======
-window.register = async function() {
-  const usuario = document.getElementById("usuarioRegister").value.trim();
-  const clave = document.getElementById("claveRegister").value.trim();
-
-  if (!usuario || !clave) return alert("Completa todos los campos");
-
-  await set(ref(db, "cuentas/" + usuario), { usuario, clave });
-  alert("Cuenta creada correctamente");
-  location.reload();
-};
-
-// ====== COPIAR URL ======
-window.copiarURL = function() {
-  navigator.clipboard.writeText(window.location.href);
-  alert("URL copiada");
-};
-
-// ====== CARGAR PARTIDA ======
-async function cargarPartida() {
-  const codigo = obtenerCodigoURL();
-  if (!codigo) return alert("Código de partida inválido");
-
-  const partidaRef = ref(db, "partidas/" + codigo);
-
-  onValue(partidaRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      document.getElementById("users-dentro").innerText = "Partida no encontrada.";
-      return;
-    }
-
-    const data = snapshot.val();
-    mostrarUsuarios(data);
-  });
+// ====== UTIL ======
+function mostrarMensaje(texto, color = "black") {
+  msg.style.color = color;
+  msg.innerText = texto;
 }
 
-// ====== MOSTRAR USUARIOS ======
-function mostrarUsuarios(data) {
-  const usersDiv = document.getElementById("users-dentro");
-  if (!data.jugadores) {
-    usersDiv.innerHTML = "<p>No hay jugadores aún.</p>";
+function generarCodigo() {
+  const letras = "abcdefghijklmnopqrstuvwxyz";
+  let c1 = "", c2 = "";
+  for (let i = 0; i < 3; i++) c1 += letras[Math.floor(Math.random() * letras.length)];
+  for (let i = 0; i < 3; i++) c2 += letras[Math.floor(Math.random() * letras.length)];
+  return `${c1}-${c2}`;
+}
+
+// ====== MOSTRAR USUARIO ======
+const params = new URLSearchParams(window.location.search);
+const usuario = params.get("user");
+if (!usuario) {
+  alert("Usuario no detectado. Volviendo al inicio.");
+  window.location.href = "index.html";
+} else {
+  userSpan.innerText = usuario;
+}
+
+// ====== CREAR PARTIDA ======
+crearBtn.onclick = async () => {
+  const modo = document.getElementById("modo").value;
+  const jugadores = document.getElementById("jugadoresMax").value;
+
+  if (!modo || !jugadores) {
+    mostrarMensaje("Completa todos los campos", "red");
     return;
   }
-  usersDiv.innerHTML = Object.values(data.jugadores).map(u => `<p>${u}</p>`).join("");
-}
 
-// ====== COMENZAR PARTIDA ======
-window.comenzarPartida = async function() {
-  const codigo = obtenerCodigoURL();
-  const partidaRef = ref(db, "partidas/" + codigo);
-  const snapshot = await get(partidaRef);
+  mostrarMensaje("Creando sala...", "blue");
 
-  if (!snapshot.exists()) return alert("Partida no encontrada");
+  const codigo = generarCodigo();
+  const partida = {
+    creador: usuario,
+    modo: modo,
+    usersMAX: jugadores,
+    fecha: Date.now()
+  };
 
-  const data = snapshot.val();
+  await set(ref(db, "partidas/" + codigo), partida);
 
-  if (data.modo === "tateti") {
-    alert("Comienza TA-TE-TI (aquí se cargará el tablero)");
-  } else if (data.modo === "Tutti Frutti") {
-    alert("Comienza TUTTI FRUTTI (aquí se mostrará la tabla de categorías)");
-  } else {
-    alert("Modo de juego desconocido");
-  }
+  mostrarMensaje(`Sala creada (${codigo})`, "green");
+  setTimeout(() => {
+    window.open(`https://abelcraftok.github.io/ARGENTUM/partidas.html?codigo=${codigo}`, "_blank");
+  }, 1500);
 };
 
-// ====== OBTENER QUERY STRING ======
-function obtenerCodigoURL() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("codigo");
-}
+// ====== UNIRSE A PARTIDA ======
+unirBtn.onclick = async () => {
+  const codigo = document.getElementById("codigoJoin").value.trim();
 
-// ====== AUTO-INICIO SI YA ESTÁ LOGUEADO ======
-window.addEventListener("load", () => {
-  const usuario = localStorage.getItem("usuarioActual");
-  if (usuario) {
-    cambiarPestaña("partida");
-    cargarPartida();
+  if (!codigo) {
+    mostrarMensaje("Ingresá un código", "red");
+    return;
   }
-});
+
+  mostrarMensaje("Buscando sala...", "blue");
+
+  const dbRef = ref(db);
+  const snapshot = await get(child(dbRef, "partidas/" + codigo));
+
+  if (!snapshot.exists()) {
+    mostrarMensaje("Sala no encontrada", "red");
+    return;
+  }
+
+  mostrarMensaje(`Entrando a sala ${codigo}...`, "green");
+  setTimeout(() => {
+    window.open(`https://abelcraftok.github.io/ARGENTUM/partidas.html?codigo=${codigo}`, "_blank");
+  }, 1500);
+};
