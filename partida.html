@@ -1,42 +1,280 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Argentum - Partidas</title>
-  <style>
-    body { font-family: Arial; background: #fafafa; text-align: center; margin: 0; padding: 20px; }
-    h2 { color: #333; }
-    input, select { padding: 6px; margin: 5px; border: 1px solid #aaa; border-radius: 5px; }
-    button { background: #4caf50; border: none; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
-    button:hover { background: #43a047; }
-    #msg { margin-top: 10px; font-weight: bold; }
-    .box { border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin: 10px auto; width: 320px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  </style>
+<meta charset="UTF-8">
+<title>Argentum Games - Partida</title>
+<link rel="icon" href="./logo.png">
+<style>
+body { font-family: sans-serif; margin: 0; padding: 0; }
+.tab { display: none; padding: 20px; }
+.active { display: block; }
+input, select, button { margin: 5px 0; padding: 5px; }
+.recuadro { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+.tabla { border-collapse: collapse; margin: 10px 0; }
+.tabla td, .tabla th { border: 1px solid #000; padding: 5px; text-align: center; }
+#tabla-container { overflow-x: auto; }
+</style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCYXAhphpsLpjhAY-am0TxXmh7JwnTztHE",
+  authDomain: "argentum-gaames.firebaseapp.com",
+  projectId: "argentum-gaames",
+  storageBucket: "argentum-gaames.firebasestorage.app",
+  messagingSenderId: "365917889897",
+  appId: "1:365917889897:web:82e8fca98dcdc88cfc09f8"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Obtiene query string
+function getQueryParam(param){
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
+}
+</script>
 </head>
 <body>
-  <h2>🎮 Argentum Games - Partidas</h2>
-  <p>Usuario: <span id="nombreUsuario"></span></p>
 
-  <div class="box">
-    <h3>Crear partida</h3>
-    <select id="modo">
-      <option value="">Seleccionar modo</option>
-      <option value="tateti">Ta-Te-Ti</option>
-      <option value="tutti-frutti">Tutti Frutti</option>
-    </select><br>
-    <input type="number" id="jugadoresMax" placeholder="Cantidad de jugadores" min="2" max="10"><br>
-    <button id="crearBtn">Crear sala</button>
-  </div>
+<h1>Argentum Games</h1>
 
-  <div class="box">
-    <h3>Unirse a partida</h3>
-    <input type="text" id="codigoJoin" placeholder="Código de sala"><br>
-    <button id="unirBtn">Entrar</button>
-  </div>
+<!-- LOGIN -->
+<div id="login" class="tab active">
+  <p>Introduci tu nombre de usuario</p>
+  <input placeholder="Usuario" id="usuario-login">
+  <p>Introduci tu clave</p>
+  <input placeholder="Clave" id="clave-login" type="password">
+  <br>
+  <button onclick="login()">Iniciar Sesion</button>
+  <button onclick="cambiarTab('register')">Crear una Cuenta</button>
+</div>
 
-  <div id="msg"></div>
+<!-- REGISTER -->
+<div id="register" class="tab">
+  <p>Introduci tu nombre de usuario</p>
+  <input placeholder="Usuario" id="usuario-reg">
+  <p>Introduci tu clave</p>
+  <input placeholder="Clave" id="clave-reg" type="password">
+  <br>
+  <button onclick="register()">Registrar</button>
+  <button onclick="cambiarTab('login')">Ya tengo una Cuenta</button>
+</div>
 
-  <script type="module" src="script2.js"></script>
+<!-- PARTIDA -->
+<div id="partida" class="tab">
+  <h2>Usuarios en la Sala</h2>
+  <div id="users-dentro"></div>
+
+  <div id="tabla-container"></div>
+
+  <button id="btn-comenzar" onclick="comenzarPartida()">Comenzar Partida</button>
+</div>
+
+<script>
+// CAMBIO DE PESTAÑAS
+function cambiarTab(tab){
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+}
+
+// LOGIN
+function login(){
+  const usuario = document.getElementById('usuario-login').value;
+  const clave = document.getElementById('clave-login').value;
+  db.ref('cuentas').orderByChild('usuario').equalTo(usuario).once('value', snap=>{
+    if(snap.exists()){
+      let valid = false;
+      snap.forEach(s=>{
+        if(s.val().clave===clave) valid = true;
+      });
+      if(valid){
+        usuarioActual = usuario;
+        cambiarTab('partida');
+        initSala();
+      } else alert('Clave incorrecta');
+    } else alert('Usuario no existe');
+  });
+}
+
+// REGISTER
+function register(){
+  const usuario = document.getElementById('usuario-reg').value;
+  const clave = document.getElementById('clave-reg').value;
+  const newUser = { usuario, clave };
+  db.ref('cuentas').push(newUser, err=>{
+    if(!err) location.reload();
+  });
+}
+
+// VARIABLES GLOBALES
+let usuarioActual = null;
+let codigoSala = getQueryParam('codigo');
+let modoSala = null;
+let categoriasSala = [];
+let salaRef = null;
+let intervalId = null;
+
+// INICIALIZA SALA
+function initSala(){
+  if(!codigoSala){ alert("No se encontró el código de la sala."); return; }
+  salaRef = db.ref('partidas/' + codigoSala);
+
+  // Agregar usuario a sala
+  salaRef.child('usuarios').once('value', snap=>{
+    let usuarios = snap.exists() ? snap.val() : [];
+    if(!usuarios.includes(usuarioActual)) usuarios.push(usuarioActual);
+    salaRef.update({ usuarios });
+  });
+
+  // Leer info de la sala
+  salaRef.once('value', snap=>{
+    const data = snap.val();
+    modoSala = data.modo;
+    categoriasSala = data.categorias || ['Obligatoria'];
+    renderUsuarios(data.usuarios || []);
+    if(modoSala==='tateti') crearTablaTateti();
+    if(modoSala==='Tutti Frutti') crearTablaTuttiFrutti();
+  });
+
+  // Actualizacion cada segundo
+  intervalId = setInterval(()=>{
+    salaRef.child('usuarios').once('value', snap=>{
+      renderUsuarios(snap.val() || []);
+    });
+    if(modoSala==='tateti') actualizarTateti();
+    if(modoSala==='Tutti Frutti') actualizarTuttiFrutti();
+  }, 1000);
+}
+
+// RENDER USUARIOS
+function renderUsuarios(usuarios){
+  const div = document.getElementById('users-dentro');
+  div.innerHTML = '';
+  usuarios.forEach(u=>{
+    const d = document.createElement('div');
+    d.innerText = u;
+    div.appendChild(d);
+  });
+}
+
+// TATETI
+let tableroTateti = [
+  ['','',''],
+  ['','',''],
+  ['','','']
+];
+function crearTablaTateti(){
+  const cont = document.getElementById('tabla-container');
+  cont.innerHTML = '<h2>Tablero Tateti</h2>';
+  const table = document.createElement('table');
+  table.classList.add('tabla');
+  for(let i=0;i<3;i++){
+    const tr = document.createElement('tr');
+    for(let j=0;j<3;j++){
+      const td = document.createElement('td');
+      td.style.width = '50px';
+      td.style.height = '50px';
+      td.style.cursor = 'pointer';
+      td.dataset.row = i;
+      td.dataset.col = j;
+      td.onclick = () => moverTateti(i,j);
+      td.innerText = tableroTateti[i][j];
+      tr.appendChild(td);
+    }
+    table.appendChild(tr);
+  }
+  cont.appendChild(table);
+}
+
+function moverTateti(fila,col){
+  salaRef.child('tateti').once('value', snap=>{
+    let tab = snap.exists() ? snap.val() : tableroTateti;
+    if(tab[fila][col]===''){
+      // local = X, visitante = O
+      const esLocal = true; // simplificado, se puede diferenciar quien creo
+      tab[fila][col] = esLocal ? 'X' : 'O';
+      salaRef.child('tateti').set(tab);
+    }
+  });
+}
+
+function actualizarTateti(){
+  salaRef.child('tateti').once('value', snap=>{
+    if(snap.exists()){
+      tableroTateti = snap.val();
+      const tds = document.querySelectorAll('.tabla td');
+      tds.forEach(td=>{
+        const i = td.dataset.row;
+        const j = td.dataset.col;
+        td.innerText = tableroTateti[i][j];
+      });
+    }
+  });
+}
+
+// TUTTI FRUTTI
+let tablaTutti = {};
+function crearTablaTuttiFrutti(){
+  const cont = document.getElementById('tabla-container');
+  cont.innerHTML = '<h2>Tabla Tutti Frutti</h2>';
+  const table = document.createElement('table');
+  table.classList.add('tabla');
+  table.id = 'tabla-partida-tutti-frutti';
+  const tr = document.createElement('tr');
+  categoriasSala.forEach(cat=>{
+    const th = document.createElement('th');
+    th.innerText = cat;
+    tr.appendChild(th);
+  });
+  table.appendChild(tr);
+  // fila editable por usuario
+  const tr2 = document.createElement('tr');
+  categoriasSala.forEach(cat=>{
+    const td = document.createElement('td');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.dataset.cat = cat;
+    input.onchange = () => actualizarTutti();
+    td.appendChild(input);
+    tr2.appendChild(td);
+  });
+  table.appendChild(tr2);
+  cont.appendChild(table);
+
+  // inicializar en Firebase
+  salaRef.child('tutti').child(usuarioActual).set(tablaTutti);
+}
+
+function actualizarTutti(){
+  const inputs = document.querySelectorAll('#tabla-partida-tutti-frutti input');
+  const data = {};
+  inputs.forEach(i=>{
+    data[i.dataset.cat] = i.value;
+  });
+  tablaTutti = data;
+  salaRef.child('tutti').child(usuarioActual).set(data);
+}
+
+function actualizarTuttiFrutti(){
+  salaRef.child('tutti').once('value', snap=>{
+    if(snap.exists()){
+      tablaTutti = snap.val()[usuarioActual] || {};
+      const inputs = document.querySelectorAll('#tabla-partida-tutti-frutti input');
+      inputs.forEach(i=>{
+        i.value = tablaTutti[i.dataset.cat] || '';
+      });
+    }
+  });
+}
+
+// COMENZAR PARTIDA (Tutti Frutti)
+function comenzarPartida(){
+  alert('Partida iniciada!');
+}
+</script>
 </body>
 </html>
