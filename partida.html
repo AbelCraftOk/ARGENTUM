@@ -1,25 +1,116 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Argentum Games - Partida</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Argentum Games</title>
 <link rel="icon" href="./logo.png">
 <style>
-body { font-family: sans-serif; margin: 0; padding: 0; }
-.tab { display: none; padding: 20px; }
-.active { display: block; }
-input, select, button { margin: 5px 0; padding: 5px; }
-.recuadro { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
-.tabla { border-collapse: collapse; margin: 10px 0; }
-.tabla td, .tabla th { border: 1px solid #000; padding: 5px; text-align: center; }
-#tabla-container { overflow-x: auto; }
+body {font-family: Arial, sans-serif; margin:0; padding:0;}
+.hidden {display:none;}
+input, select, button {margin:5px; padding:5px;}
+.recuadro {border:1px solid #000; padding:10px; margin:10px;}
+.recuadro-peq {border:1px solid #666; padding:5px; margin:5px; display:inline-block;}
+#tabla-partida-tutti-frutti table, #tabla-partida-tutti-frutti th, #tabla-partida-tutti-frutti td {border:1px solid black; border-collapse: collapse; padding:2px; font-size:14px;}
 </style>
+</head>
+<body>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<!-- Login -->
+<div id="login-tab">
+  <p>Introduci tu nombre de usuario</p>
+  <input placeholder="Usuario" id="usuario-login">
+  <p>Introduci tu clave</p>
+  <input placeholder="Clave" id="clave-login" type="password">
+  <br>
+  <button onclick="login()">Iniciar Sesion</button>
+  <button onclick="changeTab('register')">Crear una Cuenta</button>
+</div>
+
+<!-- Register -->
+<div id="register-tab" class="hidden">
+  <p>Introduci tu nombre de usuario</p>
+  <input placeholder="Usuario" id="usuario-register">
+  <p>Introduci tu clave</p>
+  <input placeholder="Clave" id="clave-register" type="password">
+  <br>
+  <button onclick="register()">Crear Cuenta</button>
+  <button onclick="changeTab('login')">Ya tengo una Cuenta</button>
+</div>
+
+<!-- Inicio -->
+<div id="inicio-tab" class="hidden">
+  <div class="recuadro">
+    <h3 id="nombre-usuario">Usuario</h3>
+  </div>
+  <div class="recuadro">
+    <h2>Amistades</h2>
+    <div class="recuadro-peq">
+      <img src="" width="50" height="50">
+      <h3>Agregar Amistades</h3>
+    </div>
+    <div id="amistades"></div>
+  </div>
+  <div class="recuadro">
+    <h2>Crear una Partida</h2>
+    <div class="recuadro-peq">
+      <img src="" width="50" height="50">
+      <h3>TA-TE-TI</h3>
+      <button onclick="changeTab('crear-tateti')">▶️</button>
+    </div>
+    <div class="recuadro-peq">
+      <img src="" width="50" height="50">
+      <h3>Tutti Frutti</h3>
+      <button onclick="changeTab('crear-tutti-frutti')">▶️</button>
+    </div>
+  </div>
+  <div class="recuadro">
+    <h2>Unirme a una Sala</h2>
+    <p>Introduci el codigo</p>
+    <input placeholder="XXX-XXX" id="codigo-partida">
+    <button onclick="entrar()">Entrar</button>
+  </div>
+</div>
+
+<!-- Crear Tateti -->
+<div id="crear-tateti-tab" class="hidden">
+  <h1>Crear Una Sala</h1>
+  <p>Indique la cantidad de usaurios que van a poder jugar</p>
+  <select id="select-tateti">
+    <option disabled selected>Seleccione una cantidad</option>
+    <option value="2">2 jugadores</option>
+  </select>
+  <br>
+  <button onclick="crearSalaTateti()">Crear Sala</button>
+</div>
+
+<!-- Crear Tutti Frutti -->
+<div id="crear-tutti-frutti-tab" class="hidden">
+  <h1>Crear Una Sala</h1>
+  <p>Indique la cantidad de usaurios que van a poder jugar</p>
+  <select id="select-tutti">
+    <option disabled selected>Seleccione una cantidad</option>
+    <option value="2">2 jugadores</option>
+    <option value="4">4 jugadores</option>
+  </select>
+  <p>Marca las categorias con las que se jugaran:</p>
+  <div>
+    <label><input type="checkbox" checked disabled> Cat. Obligatoria</label><br>
+    <label><input type="checkbox" id="animales"> Cat. Animales</label><br>
+    <label><input type="checkbox" id="ubicaciones"> Cat. Ubicaciones</label><br>
+    <label><input type="checkbox" id="entretenimiento"> Cat. Entretenimiento</label><br>
+    <label><input type="checkbox" id="escuela"> Cat. Escuela</label><br>
+    <label><input type="checkbox" id="naturaleza"> Cat. Naturaleza</label><br>
+    <label><input type="checkbox" id="tecnologia"> Cat. Tecnologia</label><br>
+    <label><input type="checkbox" id="random"> Cat. Ramdom</label><br>
+  </div>
+  <button onclick="crearSalaTutti()">Crear Sala</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-
 const firebaseConfig = {
   apiKey: "AIzaSyCYXAhphpsLpjhAY-am0TxXmh7JwnTztHE",
   authDomain: "argentum-gaames.firebaseapp.com",
@@ -31,249 +122,73 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Obtiene query string
-function getQueryParam(param){
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get(param);
-}
-</script>
-</head>
-<body>
+let currentUser = "";
 
-<h1>Argentum Games</h1>
-
-<!-- LOGIN -->
-<div id="login" class="tab active">
-  <p>Introduci tu nombre de usuario</p>
-  <input placeholder="Usuario" id="usuario-login">
-  <p>Introduci tu clave</p>
-  <input placeholder="Clave" id="clave-login" type="password">
-  <br>
-  <button onclick="login()">Iniciar Sesion</button>
-  <button onclick="cambiarTab('register')">Crear una Cuenta</button>
-</div>
-
-<!-- REGISTER -->
-<div id="register" class="tab">
-  <p>Introduci tu nombre de usuario</p>
-  <input placeholder="Usuario" id="usuario-reg">
-  <p>Introduci tu clave</p>
-  <input placeholder="Clave" id="clave-reg" type="password">
-  <br>
-  <button onclick="register()">Registrar</button>
-  <button onclick="cambiarTab('login')">Ya tengo una Cuenta</button>
-</div>
-
-<!-- PARTIDA -->
-<div id="partida" class="tab">
-  <h2>Usuarios en la Sala</h2>
-  <div id="users-dentro"></div>
-
-  <div id="tabla-container"></div>
-
-  <button id="btn-comenzar" onclick="comenzarPartida()">Comenzar Partida</button>
-</div>
-
-<script>
-// CAMBIO DE PESTAÑAS
-function cambiarTab(tab){
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(tab).classList.add('active');
+function changeTab(tab){
+  document.querySelectorAll('div[id$="-tab"]').forEach(t => t.classList.add('hidden'));
+  document.getElementById(tab + '-tab').classList.remove('hidden');
 }
 
-// LOGIN
 function login(){
-  const usuario = document.getElementById('usuario-login').value;
-  const clave = document.getElementById('clave-login').value;
-  db.ref('cuentas').orderByChild('usuario').equalTo(usuario).once('value', snap=>{
-    if(snap.exists()){
-      let valid = false;
-      snap.forEach(s=>{
-        if(s.val().clave===clave) valid = true;
-      });
-      if(valid){
-        usuarioActual = usuario;
-        cambiarTab('partida');
-        initSala();
-      } else alert('Clave incorrecta');
-    } else alert('Usuario no existe');
-  });
-}
-
-// REGISTER
-function register(){
-  const usuario = document.getElementById('usuario-reg').value;
-  const clave = document.getElementById('clave-reg').value;
-  const newUser = { usuario, clave };
-  db.ref('cuentas').push(newUser, err=>{
-    if(!err) location.reload();
-  });
-}
-
-// VARIABLES GLOBALES
-let usuarioActual = null;
-let codigoSala = getQueryParam('codigo');
-let modoSala = null;
-let categoriasSala = [];
-let salaRef = null;
-let intervalId = null;
-
-// INICIALIZA SALA
-function initSala(){
-  if(!codigoSala){ alert("No se encontró el código de la sala."); return; }
-  salaRef = db.ref('partidas/' + codigoSala);
-
-  // Agregar usuario a sala
-  salaRef.child('usuarios').once('value', snap=>{
-    let usuarios = snap.exists() ? snap.val() : [];
-    if(!usuarios.includes(usuarioActual)) usuarios.push(usuarioActual);
-    salaRef.update({ usuarios });
-  });
-
-  // Leer info de la sala
-  salaRef.once('value', snap=>{
-    const data = snap.val();
-    modoSala = data.modo;
-    categoriasSala = data.categorias || ['Obligatoria'];
-    renderUsuarios(data.usuarios || []);
-    if(modoSala==='tateti') crearTablaTateti();
-    if(modoSala==='Tutti Frutti') crearTablaTuttiFrutti();
-  });
-
-  // Actualizacion cada segundo
-  intervalId = setInterval(()=>{
-    salaRef.child('usuarios').once('value', snap=>{
-      renderUsuarios(snap.val() || []);
+  const user = document.getElementById('usuario-login').value;
+  const pass = document.getElementById('clave-login').value;
+  db.ref('cuentas').orderByChild('usuario').equalTo(user).once('value', snap => {
+    let found = false;
+    snap.forEach(child => {
+      if(child.val().clave === pass){
+        found = true;
+        currentUser = user;
+        document.getElementById('nombre-usuario').innerText = user;
+        changeTab('inicio');
+      }
     });
-    if(modoSala==='tateti') actualizarTateti();
-    if(modoSala==='Tutti Frutti') actualizarTuttiFrutti();
-  }, 1000);
-}
-
-// RENDER USUARIOS
-function renderUsuarios(usuarios){
-  const div = document.getElementById('users-dentro');
-  div.innerHTML = '';
-  usuarios.forEach(u=>{
-    const d = document.createElement('div');
-    d.innerText = u;
-    div.appendChild(d);
+    if(!found) alert('Usuario o clave incorrectos');
   });
 }
 
-// TATETI
-let tableroTateti = [
-  ['','',''],
-  ['','',''],
-  ['','','']
-];
-function crearTablaTateti(){
-  const cont = document.getElementById('tabla-container');
-  cont.innerHTML = '<h2>Tablero Tateti</h2>';
-  const table = document.createElement('table');
-  table.classList.add('tabla');
-  for(let i=0;i<3;i++){
-    const tr = document.createElement('tr');
-    for(let j=0;j<3;j++){
-      const td = document.createElement('td');
-      td.style.width = '50px';
-      td.style.height = '50px';
-      td.style.cursor = 'pointer';
-      td.dataset.row = i;
-      td.dataset.col = j;
-      td.onclick = () => moverTateti(i,j);
-      td.innerText = tableroTateti[i][j];
-      tr.appendChild(td);
-    }
-    table.appendChild(tr);
-  }
-  cont.appendChild(table);
+function register(){
+  const user = document.getElementById('usuario-register').value;
+  const pass = document.getElementById('clave-register').value;
+  db.ref('cuentas').push({usuario: user, clave: pass});
+  location.reload();
 }
 
-function moverTateti(fila,col){
-  salaRef.child('tateti').once('value', snap=>{
-    let tab = snap.exists() ? snap.val() : tableroTateti;
-    if(tab[fila][col]===''){
-      // local = X, visitante = O
-      const esLocal = true; // simplificado, se puede diferenciar quien creo
-      tab[fila][col] = esLocal ? 'X' : 'O';
-      salaRef.child('tateti').set(tab);
-    }
-  });
+function generarCodigo(){
+  const chars = 'abcdefghijklmnopqrstuvwxyz';
+  let code = '';
+  for(let i=0;i<3;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  code+='-';
+  for(let i=0;i<3;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  return code;
 }
 
-function actualizarTateti(){
-  salaRef.child('tateti').once('value', snap=>{
-    if(snap.exists()){
-      tableroTateti = snap.val();
-      const tds = document.querySelectorAll('.tabla td');
-      tds.forEach(td=>{
-        const i = td.dataset.row;
-        const j = td.dataset.col;
-        td.innerText = tableroTateti[i][j];
-      });
-    }
-  });
+function crearSalaTateti(){
+  const usersMAX = document.getElementById('select-tateti').value;
+  const codigo = generarCodigo();
+  const data = {usersMAX, modo:'tateti'};
+  db.ref('partidas/'+codigo).set(data);
+  window.open('https://abelcraftok.github.io/ARGENTUM/partidas.html?codigo='+codigo);
 }
 
-// TUTTI FRUTTI
-let tablaTutti = {};
-function crearTablaTuttiFrutti(){
-  const cont = document.getElementById('tabla-container');
-  cont.innerHTML = '<h2>Tabla Tutti Frutti</h2>';
-  const table = document.createElement('table');
-  table.classList.add('tabla');
-  table.id = 'tabla-partida-tutti-frutti';
-  const tr = document.createElement('tr');
-  categoriasSala.forEach(cat=>{
-    const th = document.createElement('th');
-    th.innerText = cat;
-    tr.appendChild(th);
-  });
-  table.appendChild(tr);
-  // fila editable por usuario
-  const tr2 = document.createElement('tr');
-  categoriasSala.forEach(cat=>{
-    const td = document.createElement('td');
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.dataset.cat = cat;
-    input.onchange = () => actualizarTutti();
-    td.appendChild(input);
-    tr2.appendChild(td);
-  });
-  table.appendChild(tr2);
-  cont.appendChild(table);
-
-  // inicializar en Firebase
-  salaRef.child('tutti').child(usuarioActual).set(tablaTutti);
+function crearSalaTutti(){
+  const usersMAX = document.getElementById('select-tutti').value;
+  let categorias = ['Obligatoria'];
+  if(document.getElementById('animales').checked) categorias.push('Animales');
+  if(document.getElementById('ubicaciones').checked) categorias.push('Ubicaciones');
+  if(document.getElementById('entretenimiento').checked) categorias.push('Entretenimiento');
+  if(document.getElementById('escuela').checked) categorias.push('Escuela');
+  if(document.getElementById('naturaleza').checked) categorias.push('Naturaleza');
+  if(document.getElementById('tecnologia').checked) categorias.push('Tecnologia');
+  if(document.getElementById('random').checked) categorias.push('Random');
+  const codigo = generarCodigo();
+  const data = {usersMAX, categorias, modo:'Tutti Frutti'};
+  db.ref('partidas/'+codigo).set(data);
+  window.open('https://abelcraftok.github.io/ARGENTUM/partidas.html?codigo='+codigo);
 }
 
-function actualizarTutti(){
-  const inputs = document.querySelectorAll('#tabla-partida-tutti-frutti input');
-  const data = {};
-  inputs.forEach(i=>{
-    data[i.dataset.cat] = i.value;
-  });
-  tablaTutti = data;
-  salaRef.child('tutti').child(usuarioActual).set(data);
-}
-
-function actualizarTuttiFrutti(){
-  salaRef.child('tutti').once('value', snap=>{
-    if(snap.exists()){
-      tablaTutti = snap.val()[usuarioActual] || {};
-      const inputs = document.querySelectorAll('#tabla-partida-tutti-frutti input');
-      inputs.forEach(i=>{
-        i.value = tablaTutti[i.dataset.cat] || '';
-      });
-    }
-  });
-}
-
-// COMENZAR PARTIDA (Tutti Frutti)
-function comenzarPartida(){
-  alert('Partida iniciada!');
+function entrar(){
+  const codigo = document.getElementById('codigo-partida').value;
+  window.open('https://abelcraftok.github.io/ARGENTUM/partidas.html?codigo='+codigo);
 }
 </script>
 </body>
