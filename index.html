@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Argentum Games</title>
+  <link rel="icon" type="image/png" href="./logo.png">
+  <meta name="description" content="Aqui vas a encontrar juegos clasicos de Argentina.">
+  <script type="module" src="script.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+    .hidden { display: none; }
+    .container { width: 90%; max-width: 500px; margin: 40px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, select, button { width: 100%; margin: 5px 0; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+    button { background: #007bff; color: white; cursor: pointer; border: none; }
+    button:hover { background: #0056b3; }
+    h2, h3, p { margin: 10px 0; }
+    .recuadro { background: #e7e7e7; padding: 10px; border-radius: 5px; margin-top: 15px; }
+    .mini-box { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 10px; margin-top: 5px; border-radius: 5px; }
+    .mini-box img { width: 40px; height: 40px; background: #ccc; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <!-- LOGIN -->
+  <div id="login" class="container">
+    <p>Introducí tu nombre de usuario</p>
+    <input type="text" id="usuarioLogin" placeholder="Usuario">
+    <p>Introducí tu clave</p>
+    <input type="password" id="claveLogin" placeholder="Clave">
+    <button onclick="login()">Iniciar Sesión</button>
+    <button onclick="cambiarPestaña('register')">Crear una Cuenta</button>
+  </div>
+
+  <!-- REGISTER -->
+  <div id="register" class="container hidden">
+    <p>Introducí tu nombre de usuario</p>
+    <input type="text" id="usuarioRegister" placeholder="Usuario">
+    <p>Introducí tu clave</p>
+    <input type="password" id="claveRegister" placeholder="Clave">
+    <button onclick="register()">Registrarme</button>
+    <button onclick="cambiarPestaña('login')">Ya tengo una cuenta</button>
+  </div>
+
+  <!-- INICIO -->
+  <div id="inicio" class="container hidden">
+    <div class="recuadro">
+      <h3 id="nombreUsuario">[nombre del usuario]</h3>
+    </div>
+
+    <div class="recuadro">
+      <h2>Amistades</h2>
+      <div class="mini-box">
+        <img src="">
+        <h3>Agregar Amistades</h3>
+      </div>
+      <div id="amistades"></div>
+    </div>
+
+    <div class="recuadro">
+      <h2>Crear una Partida</h2>
+      <div class="mini-box">
+        <img src="">
+        <h3>TA-TE-TI</h3>
+        <button onclick="cambiarPestaña('crear-tateti')">▶️</button>
+      </div>
+      <div class="mini-box">
+        <img src="">
+        <h3>Tutti Frutti</h3>
+        <button onclick="cambiarPestaña('crear-tutti-frutti')">▶️</button>
+      </div>
+    </div>
+
+    <div class="recuadro">
+      <h2>Unirme a una Sala</h2>
+      <p>Introducí el código</p>
+      <input type="text" id="codigo-partida" placeholder="XXX-XXX">
+      <button onclick="entrar()">Entrar</button>
+    </div>
+  </div>
+
+  <!-- CREAR TATETI -->
+  <div id="crear-tateti" class="container hidden">
+    <h1>Crear Una Sala</h1>
+    <p>Indique la cantidad de usuarios que van a poder jugar</p>
+    <select id="cantTateti">
+      <option value="" disabled selected>Seleccione una cantidad</option>
+      <option value="2">2 jugadores</option>
+    </select>
+    <button onclick="crearSala1()">Crear Sala</button>
+    <button onclick="cambiarPestaña('inicio')">Volver</button>
+  </div>
+
+  <!-- CREAR TUTTI FRUTTI -->
+  <div id="crear-tutti-frutti" class="container hidden">
+    <h1>Crear Una Sala</h1>
+    <p>Indique la cantidad de usuarios que van a poder jugar</p>
+    <select id="cantTutti">
+      <option value="" disabled selected>Seleccione una cantidad</option>
+      <option value="2">2 jugadores</option>
+      <option value="4">4 jugadores</option>
+    </select>
+
+    <p>Marcá las categorías con las que se jugarán:</p>
+    <div id="categorias">
+      <label><input type="checkbox" checked disabled> Cat. Obligatoria</label><br>
+      <label><input type="checkbox" value="Animales"> Cat. Animales</label><br>
+      <label><input type="checkbox" value="Ubicaciones"> Cat. Ubicaciones</label><br>
+      <label><input type="checkbox" value="Entretenimiento"> Cat. Entretenimiento</label><br>
+      <label><input type="checkbox" value="Escuela"> Cat. Escuela</label><br>
+      <label><input type="checkbox" value="Naturaleza"> Cat. Naturaleza</label><br>
+      <label><input type="checkbox" value="Tecnologia"> Cat. Tecnología</label><br>
+      <label><input type="checkbox" value="Ramdom"> Cat. Random</label>
+    </div>
+    <button onclick="crearSala2()">Crear Sala</button>
+    <button onclick="cambiarPestaña('inicio')">Volver</button>
+  </div>
+</body>
+</html>
